@@ -11,86 +11,99 @@ def ensure_requests():
         print("Installing required package: requests")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
         import requests
+    return requests
+
+requests = ensure_requests()
+
+def get_repos_file():
+    return os.path.join(os.path.dirname(__file__), '..', '..', 'amogos_repos.json')
+
+def load_repositories():
+    repos_file = get_repos_file()
+    if os.path.exists(repos_file):
+        with open(repos_file, 'r') as f:
+            return json.load(f)
+    return {"default": "mrsirfloppa/amogospackages"}
+
+def save_repositories(repos):
+    with open(get_repos_file(), 'w') as f:
+        json.dump(repos, f, indent=2)
+
+def get_amogospacks_dir(sharaos):
+    return os.path.join(sharaos.root_directory, 'packages', 'amogospacks')
 
 def run(sharaos, *args):
-    ensure_requests()
-    import requests  # Import requests here after ensuring it's installed
-
     if not args:
-        print("Usage: amogos <command> [package_name]")
-        print("Commands: install, remove, list, update, add-repo, list-repos")
+        print("Usage: amogos <command> [options]")
+        print("Commands: install, remove, list, update, add-repo, remove-repo, list-repos")
         return
 
     command = args[0]
-    if command == "install" and len(args) > 1:
+    if command == "install":
+        if len(args) < 2:
+            print("Usage: amogos install <package_name>")
+            return
         install_package(sharaos, args[1])
-    elif command == "remove" and len(args) > 1:
+    elif command == "remove":
+        if len(args) < 2:
+            print("Usage: amogos remove <package_name>")
+            return
         remove_package(sharaos, args[1])
     elif command == "list":
         list_packages(sharaos)
     elif command == "update":
         update_packages(sharaos)
-    elif command == "add-repo" and len(args) > 2:
-        add_repository(sharaos, args[1], args[2])
+    elif command == "add-repo":
+        if len(args) < 2:
+            print("Usage: amogos add-repo <repo_url>")
+            return
+        add_repository(args[1])
+    elif command == "remove-repo":
+        if len(args) < 2:
+            print("Usage: amogos remove-repo <repo_name>")
+            return
+        remove_repository(args[1])
     elif command == "list-repos":
-        list_repositories(sharaos)
+        list_repositories()
     else:
-        print("Invalid command or missing arguments.")
+        print(f"Unknown command: {command}")
 
-def get_amogospacks_dir(sharaos):
-    amogospacks_dir = os.path.join(sharaos.root_directory, 'packages', 'amogospacks')
-    if not os.path.exists(amogospacks_dir):
-        os.makedirs(amogospacks_dir)
-    return amogospacks_dir
+def add_repository(repo_url):
+    repos = load_repositories()
+    repo_name = repo_url.split('/')[-1]
+    repos[repo_name] = repo_url
+    save_repositories(repos)
+    print(f"Added repository: {repo_name}")
 
-def get_repos_file(sharaos):
-    return os.path.join(sharaos.root_directory, 'amogos_repos.json')
-
-def load_repositories(sharaos):
-    repos_file = get_repos_file(sharaos)
-    if os.path.exists(repos_file):
-        with open(repos_file, 'r') as f:
-            return json.load(f)
+def remove_repository(repo_name):
+    repos = load_repositories()
+    if repo_name in repos:
+        del repos[repo_name]
+        save_repositories(repos)
+        print(f"Removed repository: {repo_name}")
     else:
-        default_repos = {
-            "default": "https://raw.githubusercontent.com/yourusername/sharaos-packages/main/"
-        }
-        with open(repos_file, 'w') as f:
-            json.dump(default_repos, f, indent=2)
-        return default_repos
+        print(f"Repository not found: {repo_name}")
 
-def save_repositories(sharaos, repos):
-    repos_file = get_repos_file(sharaos)
-    with open(repos_file, 'w') as f:
-        json.dump(repos, f, indent=2)
-
-def add_repository(sharaos, name, url):
-    repos = load_repositories(sharaos)
-    repos[name] = url
-    save_repositories(sharaos, repos)
-    print(f"Repository '{name}' added successfully.")
-
-def list_repositories(sharaos):
-    repos = load_repositories(sharaos)
+def list_repositories():
+    repos = load_repositories()
     print("Available repositories:")
     for name, url in repos.items():
         print(f"  {name}: {url}")
 
 def install_package(sharaos, package_name):
-    repos = load_repositories(sharaos)
-    for repo_name, repo_url in repos.items():
-        package_url = f"{repo_url}{package_name}.py"
-        try:
-            response = requests.get(package_url)
-            if response.status_code == 200:
-                amogospacks_dir = get_amogospacks_dir(sharaos)
-                with open(os.path.join(amogospacks_dir, f"{package_name}.py"), 'w') as f:
-                    f.write(response.text)
-                print(f"Package '{package_name}' installed successfully from repository '{repo_name}'.")
-                sharaos.reload_commands()
-                return
-        except Exception as e:
-            print(f"Error installing package from repository '{repo_name}': {str(e)}")
+    repos = load_repositories()
+    amogospacks_dir = get_amogospacks_dir(sharaos)
+    
+    for repo_url in repos.values():
+        package_url = f"https://raw.githubusercontent.com/{repo_url}/main/{package_name}.py"
+        response = requests.get(package_url)
+        if response.status_code == 200:
+            os.makedirs(amogospacks_dir, exist_ok=True)
+            with open(os.path.join(amogospacks_dir, f"{package_name}.py"), 'w') as f:
+                f.write(response.text)
+            print(f"Package '{package_name}' installed successfully.")
+            sharaos.reload_commands()
+            return
     
     print(f"Package '{package_name}' not found in any repository.")
 
