@@ -1,4 +1,4 @@
-from packages import cls
+import os
 
 def run(sharaos, *args):
-    cls.run(sharaos, *args)
+    os.system('cls' if os.name == 'nt' else 'clear')

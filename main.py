@@ -15,14 +15,28 @@ class SharaOS:
         self.user_commands = set()
         core_dir = os.path.join(self.root_directory, 'packages', 'core')
         user_dir = os.path.join(self.root_directory, 'packages', 'userpacks')
+        amogos_dir = os.path.join(self.root_directory, 'packages', 'amogospacks')
         
-        # Load core packages first
+        print(f"Core directory: {core_dir}")
+        print(f"User directory: {user_dir}")
+        print(f"Amogos packages directory: {amogos_dir}")
+        
+        # Create amogospacks directory if it doesn't exist
+        if not os.path.exists(amogos_dir):
+            os.makedirs(amogos_dir)
+            print(f"Created Amogos packages directory: {amogos_dir}")
+        
         self._load_packages(core_dir, is_core=True)
-        
-        # Load user packages second
         self._load_packages(user_dir, is_core=False)
+        self._load_packages(amogos_dir, is_core=False)
+        
+        print("Loaded commands:", list(self.commands.keys()))
 
     def _load_packages(self, packages_dir, is_core):
+        if not os.path.exists(packages_dir):
+            print(f"Directory does not exist: {packages_dir}")
+            return
+        
         sys.path.insert(0, packages_dir)
         
         for filename in os.listdir(packages_dir):
@@ -38,6 +52,8 @@ class SharaOS:
                             print(f"Loaded {'core' if is_core else 'user'} command: {module_name}")
                         else:
                             print(f"Warning: User command '{module_name}' conflicts with a core command and will be ignored.")
+                    else:
+                        print(f"Warning: Module '{module_name}' does not have a 'run' function.")
                 except ImportError as e:
                     print(f"Error loading {module_name}: {str(e)}")
         

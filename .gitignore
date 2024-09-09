@@ -17,3 +17,5 @@ Desktop.ini
 # User-specific files
 packages/userpacks/*
 !packages/userpacks/.gitkeep
+#removes repository from main project
+/amogospackages/
