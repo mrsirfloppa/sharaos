@@ -1,0 +1,19 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# OS-specific files
+Thumbs.db
+Desktop.ini
+
+# User-specific files
+packages/userpacks/*
+!packages/userpacks/.gitkeep
